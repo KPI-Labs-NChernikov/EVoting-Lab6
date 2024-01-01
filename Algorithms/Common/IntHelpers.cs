@@ -16,4 +16,6 @@ public static class IntHelpers
 
         return randomProvider.NextItem(divisors);
     }
+
+    public static int BitsCountToBytesCount(int bitsCount) => (bitsCount + 8 - 1) / 8;
 }
