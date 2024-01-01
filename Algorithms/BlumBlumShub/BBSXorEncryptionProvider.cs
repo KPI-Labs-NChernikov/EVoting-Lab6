@@ -46,7 +46,7 @@ public sealed class BBSXorEncryptionProvider : IEncryptionProvider<BlumBlumShubK
             result = result.Add(x.Mod(BigInteger.Two));
         }
 
-        return result.ToByteArrayUnsigned();
+        return ArrayHelpers.NormalizeArray(result.ToByteArrayUnsigned(), length);
     }
 
     private int CalculateBitLength(int byteLength) => byteLength * 8;
