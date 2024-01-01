@@ -17,3 +17,6 @@ var ballot = new Ballot(encrypted, x0, Guid.NewGuid());
 var transformed = transformer.Transform(ballot);
 var reverseTransformed = transformer.ReverseTransform<Ballot>(transformed);
 Console.WriteLine();
+var generator = new BlumBlumShubRngProvider(x0, keys.PrivateKey.N);
+var g1 = generator.GenerateNext(11);
+Console.WriteLine();

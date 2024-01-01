@@ -16,7 +16,7 @@ public sealed class BBSXorEncryptionProvider : IEncryptionProvider<BlumBlumShubK
         var x = new BigInteger(1, key.X0, 0, key.X0.Length);
         var n = new BigInteger(1, key.N, 0, key.N.Length);
 
-        var sequence = Generate(x, n, CalculateBitLength(message.Length));
+        var sequence = Generate(x, n, message.Length);
 
         return Xor(message, sequence);
     }
@@ -31,15 +31,15 @@ public sealed class BBSXorEncryptionProvider : IEncryptionProvider<BlumBlumShubK
         var x = new BigInteger(1, key.X0, 0, key.X0.Length);
         var n = new BigInteger(1, key.P, 0, key.P.Length).Multiply(new BigInteger(1, key.Q, 0, key.Q.Length));
 
-        var sequence = Generate(x, n, CalculateBitLength(message.Length));
+        var sequence = Generate(x, n, message.Length);
 
         return Xor(message, sequence);
     }
 
-    private byte[] Generate(BigInteger x, BigInteger n, int length)
+    private static byte[] Generate(BigInteger x, BigInteger n, int length)
     {
         var result = BigInteger.Zero;
-        for (var i = 0; i < length; i++)
+        for (var i = 0; i < length * 8; i++)
         {
             x = x.ModPow(BigInteger.Two, n);
             result = result.ShiftLeft(1);
@@ -48,8 +48,6 @@ public sealed class BBSXorEncryptionProvider : IEncryptionProvider<BlumBlumShubK
 
         return ArrayHelpers.NormalizeArray(result.ToByteArrayUnsigned(), length);
     }
-
-    private int CalculateBitLength(int byteLength) => byteLength * 8;
 
     private static byte[] Xor(byte[] data, byte[] key)
     {

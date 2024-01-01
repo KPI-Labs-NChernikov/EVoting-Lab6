@@ -49,7 +49,7 @@ public sealed class BlumBlumShubKeysGenerator : IKeyGenerator<BlumBlumShubKey>, 
         return number;
     }
 
-    private BigInteger GenerateX(BigInteger n)
+    private static BigInteger GenerateX(BigInteger n)
     {
         BigInteger x;
         do
