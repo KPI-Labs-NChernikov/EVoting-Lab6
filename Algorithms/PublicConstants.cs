@@ -5,7 +5,9 @@ public static class PublicConstants
 {
     public const int IntSize = sizeof(int);
     public const int GuidSize = 16;
+
     public static readonly Encoding Encoding = Encoding.UTF8;
+
     public const int ElGamalKeySize = 1024;
 
     public const int BBSPQBitsCount = 256;
