@@ -19,11 +19,11 @@ public sealed class ElectionCommission
     private readonly IObjectToByteArrayTransformer _transformer;
 
     private readonly Dictionary<Guid, int> _votingResults = [];
-    private readonly List<Candidate> _candidates;
+    private IReadOnlyList<Candidate> Candidates { get; }
 
-    public ElectionCommission(IEnumerable<Candidate> candidates, Keys<AsymmetricKeyParameter> messageEncryptionKeys, IKeyGenerator<BlumBlumShubKey> rngKeyGenerator, IEncryptionProvider<AsymmetricKeyParameter> messageEncryptionProvider, IEncryptionProvider<BlumBlumShubKey> rngEncryptionProvider, IObjectToByteArrayTransformer transformer)
+    public ElectionCommission(IReadOnlyList<Candidate> candidates, Keys<AsymmetricKeyParameter> messageEncryptionKeys, IKeyGenerator<BlumBlumShubKey> rngKeyGenerator, IEncryptionProvider<AsymmetricKeyParameter> messageEncryptionProvider, IEncryptionProvider<BlumBlumShubKey> rngEncryptionProvider, IObjectToByteArrayTransformer transformer)
     {
-        _candidates = candidates.ToList();
+        Candidates = candidates;
 
         MessageEncryptionPublicKey = messageEncryptionKeys.PublicKey;
         _messageEncryptionPrivateKey = messageEncryptionKeys.PrivateKey;
@@ -82,7 +82,7 @@ public sealed class ElectionCommission
 
     private Result<(Guid, int)> VerifyCandidateId((Guid, int) ids)
     {
-        if (_candidates.All( c => c.Id != ids.Item2))
+        if (Candidates.All( c => c.Id != ids.Item2))
         {
             return Result.Fail("The candidate was not found");
         }
@@ -99,7 +99,7 @@ public sealed class ElectionCommission
     public VotingResults CalculateResults()
     {
         var results = new VotingResults();
-        foreach (var candidate in _candidates)
+        foreach (var candidate in Candidates)
         {
             results.CandidatesResults.Add(candidate.Id, new(candidate));
         }
