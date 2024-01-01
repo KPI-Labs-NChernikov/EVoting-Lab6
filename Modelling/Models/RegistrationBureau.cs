@@ -67,7 +67,7 @@ public sealed class RegistrationBureau
         return Result.Ok(new ECProgramUserData(login, password, token!));
     }
 
-    public bool VerifyAccount(string login, string password)
+    internal bool VerifyAccount(string login, string password)
     {
         var accountWasFound = _votersAccounts.TryGetValue(login, out var hashPassword);
         if (!accountWasFound)

@@ -48,7 +48,7 @@ public sealed class ElectionCommission
         return tokens;
     }
 
-    public Result AcceptBallot(byte[] encryptedBallot)
+    internal Result AcceptBallot(byte[] encryptedBallot)
     {
         return Result.Try(
                 () => _transformer.ReverseTransform<Ballot>(
