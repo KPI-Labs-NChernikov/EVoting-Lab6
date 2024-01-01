@@ -33,9 +33,9 @@ public sealed class DemoDataFactory
     {
         return new List<Candidate>
         {
-            new ("Ishaan Allison"),
-            new ("Oliver Mendez"),
-            new ("Naomi Winter"),
+            new (1, "Ishaan Allison"),
+            new (2, "Oliver Mendez"),
+            new (3, "Naomi Winter"),
         };
     }
 
@@ -81,11 +81,11 @@ public sealed class DemoDataFactory
                 2 => 0,
 
                 3 => 1,
-                4 => 0,
+                4 => 1,
                 5 => 2,
                 6 => 2,
                 7 => 2,
-                8 => 0,
+                8 => 0,     // Unable goes here.
 
                 _ => throw new InvalidOperationException("Negative and zero voters' ids are not supported in this method.")
             };

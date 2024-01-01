@@ -24,7 +24,7 @@ public sealed class RegistrationBureau
         }
     }
 
-    public IReadOnlyList<Guid> GetVotersIds => _votersTokens.Keys.ToList();
+    public IReadOnlyList<Guid> VotersIds => _votersTokens.Keys.ToList();
 
     public void ReceiveTokens(IReadOnlyList<Token> tokens)
     {

@@ -1,12 +1,13 @@
 ﻿namespace Modelling.Models;
 public sealed class Candidate : IEquatable<Candidate>
 {
-    public int Id { get; set; }
+    public int Id { get; }
 
     public string FullName { get; }
 
-    public Candidate(string fullName)
+    public Candidate(int id, string fullName)
     {
+        Id = id;
         FullName = fullName;
     }
 

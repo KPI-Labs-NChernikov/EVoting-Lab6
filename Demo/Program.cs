@@ -1,22 +1,29 @@
-﻿using System.Text;
-using Algorithms.BlumBlumShub;
+﻿using Algorithms.BlumBlumShub;
+using Algorithms.Common;
+using Algorithms.ElGamal;
+using Algorithms.SHA256;
+using Demo;
 using Modelling.CustomTransformers;
-using Modelling.Models;
 
-var bbsKeyGen = new BlumBlumShubKeysGenerator();
-var bbs = new BBSXorEncryptionProvider();
-var keys = bbsKeyGen.Generate();
-var x0 = bbsKeyGen.GenerateSeed(keys.PublicKey.N);
-var publicKey = keys.PublicKey.WithX0(x0);
-var toEncrypt = Encoding.UTF8.GetBytes("Hello world");
-var encrypted = bbs.Encrypt(toEncrypt, publicKey);
-var decrypted = bbs.Decrypt(encrypted, keys.PrivateKey.WithX0(x0));
-Console.WriteLine(Encoding.UTF8.GetString(decrypted));
-var transformer = new ModellingTransformer();
-var ballot = new Ballot(encrypted, x0, Guid.NewGuid());
-var transformed = transformer.Transform(ballot);
-var reverseTransformed = transformer.ReverseTransform<Ballot>(transformed);
-Console.WriteLine();
-var generator = new BlumBlumShubRngProvider(x0, keys.PrivateKey.N);
-var g1 = generator.GenerateNext(11);
-Console.WriteLine();
+var objectToByteArrayTransformer = new ObjectToByteArrayTransformer();
+objectToByteArrayTransformer.TypeTransformers.Add(new ModellingTransformer());
+
+var bbsKeyGenerator = new BlumBlumShubKeysGenerator();
+var bbsEncryptionProvider = new BBSXorEncryptionProvider();
+var bbsGeneratorN = bbsKeyGenerator.Generate().PublicKey.N;
+var bbsGeneratorX0 = bbsKeyGenerator.GenerateSeed(bbsGeneratorN);
+var bbsGenerator = new BlumBlumShubRngProvider(bbsGeneratorX0, bbsGeneratorN);
+
+var elGamalKeyGenerator = new ElGamalKeysGenerator();
+var elGamalEncryptionProvider = new ElGamalEncryptionProvider();
+
+var passwordHasher = new SHA256PasswordHasher();
+
+var dataFactory = new DemoDataFactory(elGamalEncryptionProvider, elGamalKeyGenerator, bbsEncryptionProvider, bbsKeyGenerator, bbsKeyGenerator, bbsGenerator, objectToByteArrayTransformer, passwordHasher);
+
+var candidates = dataFactory.CreateCandidates();
+var votersData = dataFactory.CreateVotersData();
+
+var printer = new ModellingPrinter(dataFactory);
+
+printer.PrintUsualVoting(candidates, votersData);

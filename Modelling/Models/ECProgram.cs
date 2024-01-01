@@ -34,7 +34,7 @@ public sealed class ECProgram
 
         _userIsLoggedIn = true;
 
-        return Result.FailIf(result, new Error("Log in failed"));
+        return Result.FailIf(!result, new Error("Log in failed"));
     }
 
     public Result ConnectToken(Token token)

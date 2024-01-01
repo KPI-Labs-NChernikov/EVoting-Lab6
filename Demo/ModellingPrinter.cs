@@ -11,58 +11,73 @@ public sealed class ModellingPrinter
         _dataFactory = dataFactory;
     }
 
-    public void PrintUsualVoting(CentralElectionCommission commission, IReadOnlyList<Voter> voters, IReadOnlyList<Candidate> candidates)
+    public void PrintUsualVoting(IReadOnlyList<Candidate> candidates, IReadOnlyList<VoterData> votersData)
     {
         Console.WriteLine("Usual voting:");
 
-        commission.SetupVoters(voters);
-        commission.SetupCandidates(candidates);
+        var votersCount = 8;
+        var registrationBureau = _dataFactory.CreateRegistrationBureau(votersCount);
+        var electionCommission = _dataFactory.CreateElectionCommission(candidates);
+        var tokens = electionCommission.GenerateTokens(registrationBureau.VotersIds);
+        registrationBureau.ReceiveTokens(tokens);
 
-        Console.WriteLine("Voters:");
-        foreach (var voter in voters)
+        var programUserDataList = new List<ECProgramUserData>();
+        foreach (var voterData in votersData)
         {
-            Console.WriteLine($"{voter.FullName} ({voter.Id})");
-        }
-        Console.WriteLine();
-        Console.WriteLine("Candidates:");
-        foreach (var candidate in candidates)
-        {
-            Console.WriteLine($"{candidate.FullName} ({candidate.Id})");
-        }
-        Console.WriteLine();
-
-        var subCommission1 = _dataFactory.CreateElectionCommission(commission.VotersSignaturePublicKeys);
-        var subCommission2 = _dataFactory.CreateElectionCommission(commission.VotersSignaturePublicKeys);
-
-        var votersWithCandidateIds = _dataFactory.CreateVotersWithCandidatesIds(voters, candidates);
-        foreach (var (voter, candidateId) in votersWithCandidateIds)
-        {
-            var ballots = voter.PrepareBallots(candidateId, commission.EncryptionPublicKey);
-            var result1 = subCommission1.AcceptBallot(ballots.Item1);
-            if (result1.IsFailed)
+            var result = registrationBureau.GrantToken(voterData);
+            if (result.IsSuccess)
             {
-                result1.PrintErrorIfFailed();
+                Console.WriteLine($"Token with voter id {result.Value.Token.VoterId} has been granted to user {voterData.FullName}");
+                programUserDataList.Add(result.Value);
             }
             else
             {
-                Console.WriteLine($"Commission 1 accepted {voter.Id} vote.");
-            }
-            var result2 = subCommission2.AcceptBallot(ballots.Item2);
-            if (result2.IsFailed)
-            {
-                result2.PrintErrorIfFailed();
-            }
-            else
-            {
-                Console.WriteLine($"Commission 2 accepted {voter.Id} vote.");
+                result.PrintErrorIfFailed();
             }
         }
         Console.WriteLine();
 
-        var commission1Results = subCommission1.PublishBallots();
-        var commission2Results = subCommission2.PublishBallots();
+        var program = _dataFactory.CreateEcProgram(registrationBureau, electionCommission);
+        var votersWithCandidateIds = _dataFactory.CreateVotersWithCandidatesIds(
+            programUserDataList.Select(d => d.Token.VoterId).ToList(), candidates);
+        foreach (var data in programUserDataList)
+        {
+            var loginResult = program.Login(data.Login, data.Password);
 
-        var results = commission.AcceptBallots(commission1Results, commission2Results);
+            if (loginResult.IsSuccess)
+            {
+                Console.WriteLine($"Voter {data.Token.VoterId} logged in successfully");
+            }
+            else
+            {
+                loginResult.PrintErrorIfFailed();
+            }
+
+            var tokenConnectionResult = program.ConnectToken(data.Token);
+            if (tokenConnectionResult.IsSuccess)
+            {
+                Console.WriteLine($"Voter {data.Token.VoterId} connected the token successfully");
+            }
+            else
+            {
+                loginResult.PrintErrorIfFailed();
+            }
+
+            var votingResult = program.Vote(votersWithCandidateIds[data.Token.VoterId]);
+            if (votingResult.IsSuccess)
+            {
+                Console.WriteLine($"Voter {data.Token.VoterId} casted their vote");
+            }
+            else
+            {
+                loginResult.PrintErrorIfFailed();
+            }
+
+            program.Logout();
+        }
+        Console.WriteLine();
+
+        var results = electionCommission.CalculateResults();
         PrintVotingResults(results);
 
         Console.WriteLine();
@@ -72,14 +87,6 @@ public sealed class ModellingPrinter
     {
         Console.WriteLine("Results:");
 
-        Console.WriteLine("Ballots:");
-        foreach (var ballotResult in results.Ballots)
-        {
-            Console.WriteLine($"Voter ID: {ballotResult.VoterId} Candidate: {ballotResult.CandidateId}");
-        }
-        Console.WriteLine($"Spoiled ballots: {results.SpoiledPlainBallots.Count}");
-        Console.WriteLine($"Spoiled ballots parts: {results.SpoiledBallots.Count}");
-        Console.WriteLine("Candidates:");
         foreach (var candidate in results.CandidatesResults.Values.OrderByVotes())
         {
             Console.WriteLine($"{candidate.Candidate.FullName} (id: {candidate.Candidate.Id}): {candidate.Votes} votes");
