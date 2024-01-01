@@ -1,28 +1,32 @@
 ﻿using Algorithms.Abstractions;
 using Modelling.Models;
 using Org.BouncyCastle.Crypto;
-using System.Security.Cryptography;
+using Algorithms.Common;
 
 namespace Demo;
 public sealed class DemoDataFactory
 {
-    private readonly IEncryptionProvider<AsymmetricKeyParameter> _encryptionProvider;
-    private readonly IKeyGenerator<AsymmetricKeyParameter> _encryptionKeyGenerator;
+    private readonly IEncryptionProvider<AsymmetricKeyParameter> _messageEncryptionProvider;
+    private readonly IKeyGenerator<AsymmetricKeyParameter> _messageEncryptionKeyGenerator;
 
-    private readonly ISignatureProvider<DSAParameters> _signatureProvider;
-    private readonly IKeyGenerator<DSAParameters> _signatureKeyGenerator;
+    private readonly IEncryptionProvider<BlumBlumShubKey> _rngEncryptionProvider;
+    private readonly IKeyGenerator<BlumBlumShubKey> _rngEncryptionKeyGenerator;
+    private readonly ISeedGenerator _seedGenerator;
+    private readonly IRngProvider _rngProvider;
 
     private readonly IObjectToByteArrayTransformer _transformer;
-    private readonly IRandomProvider _randomProvider;
+    private readonly IPasswordHasher _passwordHasher;
 
-    public DemoDataFactory(IEncryptionProvider<AsymmetricKeyParameter> encryptionProvider, IKeyGenerator<AsymmetricKeyParameter> encryptionKeyGenerator, ISignatureProvider<DSAParameters> signatureProvider, IKeyGenerator<DSAParameters> keysignatureGenerator, IObjectToByteArrayTransformer objectToByteArrayTransformer, IRandomProvider randomProvider)
+    public DemoDataFactory(IEncryptionProvider<AsymmetricKeyParameter> messageEncryptionProvider, IKeyGenerator<AsymmetricKeyParameter> messageEncryptionKeyGenerator, IEncryptionProvider<BlumBlumShubKey> rngEncryptionProvider, IKeyGenerator<BlumBlumShubKey> rngEncryptionKeyGenerator, ISeedGenerator seedGenerator, IRngProvider rngProvider, IObjectToByteArrayTransformer transformer, IPasswordHasher passwordHasher)
     {
-        _encryptionProvider = encryptionProvider;
-        _encryptionKeyGenerator = encryptionKeyGenerator;
-        _signatureProvider = signatureProvider;
-        _signatureKeyGenerator = keysignatureGenerator;
-        _transformer = objectToByteArrayTransformer;
-        _randomProvider = randomProvider;
+        _messageEncryptionProvider = messageEncryptionProvider;
+        _messageEncryptionKeyGenerator = messageEncryptionKeyGenerator;
+        _rngEncryptionProvider = rngEncryptionProvider;
+        _rngEncryptionKeyGenerator = rngEncryptionKeyGenerator;
+        _seedGenerator = seedGenerator;
+        _rngProvider = rngProvider;
+        _transformer = transformer;
+        _passwordHasher = passwordHasher;
     }
 
     public IReadOnlyList<Candidate> CreateCandidates()
@@ -35,35 +39,40 @@ public sealed class DemoDataFactory
         };
     }
 
-    public IReadOnlyList<Voter> CreateVoters()
+    public IReadOnlyList<VoterData> CreateVotersData()
     {
-        return new List<Voter>
+        return new List<VoterData>
         {
-            new ("Jasper Lambert", _signatureKeyGenerator.Generate(), _signatureProvider, _encryptionProvider, _transformer, _randomProvider),
-            new ("Jonty Levine", _signatureKeyGenerator.Generate(), _signatureProvider, _encryptionProvider, _transformer, _randomProvider),      // Not capable.
-            new ("Nathaniel Middleton", _signatureKeyGenerator.Generate(), _signatureProvider, _encryptionProvider, _transformer, _randomProvider),
-            new ("Nathan Bass", _signatureKeyGenerator.Generate(), _signatureProvider, _encryptionProvider, _transformer, _randomProvider),
-            new ("Aran Doyle", _signatureKeyGenerator.Generate(), _signatureProvider, _encryptionProvider, _transformer, _randomProvider),
-            new ("Julian Harper", _signatureKeyGenerator.Generate(), _signatureProvider, _encryptionProvider, _transformer, _randomProvider),
-            new ("Lucian Gross", _signatureKeyGenerator.Generate(), _signatureProvider, _encryptionProvider, _transformer, _randomProvider),
-
-            new ("Alicia Sierra", _signatureKeyGenerator.Generate(), _signatureProvider, _encryptionProvider, _transformer, _randomProvider)
+            new ("Jasper Lambert", new DateOnly(2000, 11, 15)),
+            new ("Jonty Levine", new DateOnly(2010, 1, 2)),      // Not capable.
+            new ("Nathaniel Middleton", new DateOnly(1981, 1, 2)),
+            new ("Nathan Bass", new DateOnly(1995, 1, 25)),
+            new ("Aran Doyle", new DateOnly(2003, 1, 7)),
+            new ("Julian Harper", new DateOnly(1937, 9, 2)),
+            new ("Lucian Gross", new DateOnly(1999, 12, 20)),
+            new ("Alicia Sierra", new DateOnly(1981, 1, 2))
         };
     }
 
-    public CentralElectionCommission CreateCentralElectionCommission()
+    public RegistrationBureau CreateRegistrationBureau(int potentialVotersCount)
     {
-        return new CentralElectionCommission(_encryptionKeyGenerator.Generate(), _encryptionProvider, _randomProvider, _transformer);
+        return new RegistrationBureau(potentialVotersCount, _passwordHasher, _rngProvider);
     }
 
-    public ElectionCommission CreateElectionCommission(IReadOnlyDictionary<int, DSAParameters> votersSignaturePublicKeys)
+    public ElectionCommission CreateElectionCommission(IReadOnlyList<Candidate> candidates)
     {
-        return new ElectionCommission(votersSignaturePublicKeys, _signatureProvider, _transformer);
+        return new ElectionCommission(candidates, _messageEncryptionKeyGenerator.Generate(), _rngEncryptionKeyGenerator, _messageEncryptionProvider, _rngEncryptionProvider, _transformer);
     }
 
-    public Dictionary<Voter, int> CreateVotersWithCandidatesIds(IReadOnlyList<Voter> voters, IReadOnlyList<Candidate> candidates)
+    public ECProgram CreateEcProgram(RegistrationBureau registrationBureau, ElectionCommission electionCommission)
     {
-        var dictionary = new Dictionary<Voter, int>();
+        return new ECProgram(_seedGenerator, _messageEncryptionProvider, _rngEncryptionProvider, _transformer,
+            electionCommission, registrationBureau);
+    }
+
+    public Dictionary<Guid, int> CreateVotersWithCandidatesIds(IReadOnlyList<Guid> voters, IReadOnlyList<Candidate> candidates)
+    {
+        var dictionary = new Dictionary<Guid, int>();
         for (var i = 0; i < voters.Count; i++)
         {
             var candidateIndex = (i % 8 + 1) switch
