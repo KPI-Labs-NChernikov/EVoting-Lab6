@@ -59,7 +59,7 @@ public sealed class RegistrationBureau
 
         _voterData[voterId] = voter;
 
-        var login = $"{voter.FullName.ToLower()}-{voter.BirthDay.ToShortDateString()}";
+        var login = $"{voter.FullName.ToLower()}-{voter.BirthDay.ToShortDateString().Replace("/", "-")}";
         var password = PublicConstants.Encoding.GetString(_rngProvider.GenerateNext(8));
 
         _votersAccounts[login] = _passwordHasher.Hash(password);
